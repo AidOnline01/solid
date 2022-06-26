@@ -2,7 +2,7 @@
 
 1. [Single responsibility principles (SRP)](#single-responsibility-principle)
 2. [Open-closed priciple (OCP)](#open-closed-principle)
-3. Liskov substitution principle (LSP)
+3. [Liskov substitution principle (LSP)](#liskov-substitution-principle)
 4. Interface segregation principle (ISP)
 5. Dependency injection principle (DIP)
 
