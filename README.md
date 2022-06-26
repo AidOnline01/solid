@@ -29,15 +29,15 @@ class Order {
     $this->sendDeleteOrderNotification();
   }
    
-  public function getProductFromDB($productId) {/* Get from db logic */}
+  public function getProductFromDB(int $productId) : Product {/* Get from db logic */}
   
-  public function saveToDatabase($product) {/* Save to db logic */}
+  public function saveToDatabase(Product $product) {/* Save to db logic */}
    
-  public function deleteFromDatabase($orderId) {/* Delete from db logic */}
+  public function deleteFromDatabase(int $orderId) {/* Delete from db logic */}
   
-  public function applyDiscount($product) {/* Discount logic */}
+  public function applyDiscount(Product $product) {/* Discount logic */}
   
-  public function sendCreateOrderNotification($order) {/* Notification logic */}
+  public function sendCreateOrderNotification(Order $order) {/* Notification logic */}
 
   public function sendDeleteOrderNotification() {/* Notification logic */}
 }
@@ -71,20 +71,20 @@ class OrderController {
 }
 
 class OrderRepository {
-  public function create($order) {/* Insert order to db logic */}
-  public function delete($orderId) {/* Delete order from db logic */}
+  public function create(Order $order) : Order {/* Insert order to db logic */}
+  public function delete(int $orderId) {/* Delete order from db logic */}
 }
 
 class ProductRepository {
-  public function getById($productId) { /* Get product from db logic */ }
+  public function getById(int $productId) : Product { /* Get product from db logic */ }
 }
 
 class DiscountService {
-  public function apply($product) {/* Discount logic */}
+  public function apply(Product $product) : int {/* Discount logic */}
 }
 
 class OrderNotificationService {
-  public function sendCreateNotification($order) {/* Create notification logic */}
+  public function sendCreateNotification(Order $order) {/* Create notification logic */}
   public function sendDeleteNotification() {/* Delete notification logic */}
 }
 ```
@@ -191,3 +191,123 @@ class GuestUser extends User {
 We have delegated `delete` responsibility from `UserController` to `User`, `AdminUser` and `GuestUser`, that way satisfying open-closed principle. If we would like to add new `SupportUser`, we would be able to do it without modifying `UserController@delete` method functionality.
 
 We can futher improve our code by delegating `/* Delete from db */` to DatabaseUserRepository and `/* Delete from session */` to SessionUserRepository, that way we will satisfy single responsibility principle as well. 
+
+## Liskov substitution principle
+
+When we have `Parent` class extended by `Child`, we should be able to replace `Parent` with `Child` without breaking functionality of an application.
+
+### Wrong example
+```
+class DeliveryController {
+  public function getCost(Product $product, int $distance, int $amount) : int {
+    return $product->calculateDelivery($distance) * $amount;
+  }
+}
+
+class Product {
+  private $deliveryCostPerKm = 20;
+
+  public function calculateDelivery(int $distance) : int {
+    return $this->deliveryCostPerKm * $distance;
+  }
+}
+
+class Sand extends Product {
+  public function calculateDelivery(int $distance, int $weight) : int {
+    return $this->deliveryCostPerKm * $distance * $weight;
+  }
+}
+
+class Cartoon extends Product {
+  public function calculateDelivery($distance) {
+    throw new Exception('Can't deliver online product');
+  }
+}
+```
+
+What if we would pass to `DeliveryController@getCost` -> `Product`, `Sand` or `Cartoon` instances:
+
+```
+const controller = new DeliveryController();
+
+$controller->getCost(new Product(), 10, 10); // successfully returns price of product (10 * 10 * 20 = 2000)
+$controller->getCost(new Sand(), 10, 10); // fails because we have not passed `$weight` parameter to `Sand@calculateDelivery` 
+$controller->getCost(new Cartoon(), 10, 10); // fails because `Cartoon@calculateDelivery` is throwing an Exception that it's parent doesn't have
+```
+
+So we have failed Liksov substitution principle, because parameters and Exceptions of classes derived from `Product` not the same.
+
+### Better example
+We would need to add an Interface to define a contract for all classes that implements it.
+
+```
+/**
+ * @property int $deliveryCostPerKm;
+ */
+interface ProductInterface {
+    /**
+     * @throws NotDeliverableException if the product is not possible to deliver
+     */
+    public function calculateDelivery(int $distance, int $weight): int;
+}
+```
+
+According to this contract we would need to make few changes to the code:
+1. Add exception handling to `DeliveryController`
+2. Add `$weight` parameter to the `ProductController` and `Product` classes
+
+**Complete code:**
+```
+/**
+ * @property int $deliveryCostPerKm;
+ */
+interface ProductInterface {
+    /**
+     * @throws NotDeliverableException if the product is not possible to deliver
+     */
+    public function calculateDelivery(int $distance, int $weight): int;
+}
+
+class DeliveryController {
+  public function getCost(Product $product, int $distance, int $amount, int $weight = 0) : int {
+    try {
+      return $product->calculateDelivery($distance, $weight) * $amount;
+    }
+    catch(NotDeliverableException $exception) {
+      /* Exception handling logic */
+      
+      return 0;
+    }
+  }
+}
+
+class Product implements ProductInterface {
+  private $deliveryCostPerKm = 20;
+
+  public function calculateDelivery(int $distance, $weight = 0) : int {
+    return $this->deliveryCostPerKm * $distance;
+  }
+}
+
+class Sand extends Product {
+  public function calculateDelivery(int $distance, int $weight) : int {
+    return $this->deliveryCostPerKm * $distance * $weight;
+  }
+}
+
+class Cartoon extends Product {
+  public function calculateDelivery($distance) {
+    throw new Exception('Can't deliver online product');
+  }
+}
+```
+
+If we run the code now, we would see following result.
+
+```
+const controller = new DeliveryController();
+
+$controller->getCost(new Product(), 10, 10); // returns price of product (10 * 10 * 20 = 2000)
+$controller->getCost(new Sand(), 10, 10, 15); //  returns price of product (10 * 10 * 20 * 2 = 4000)
+$controller->getCost(new Cartoon(), 10, 10); // handles errors, and returns zero delivery cost
+```
