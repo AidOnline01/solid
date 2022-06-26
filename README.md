@@ -311,3 +311,5 @@ $controller->getCost(new Product(), 10, 10); // returns price of product (10 * 1
 $controller->getCost(new Sand(), 10, 10, 15); //  returns price of product (10 * 10 * 20 * 2 = 4000)
 $controller->getCost(new Cartoon(), 10, 10); // handles errors, and returns zero delivery cost
 ```
+
+The code working successfully when we replace `Product` with `Sand` and `Cartoon`. That means that our code now obide to liskov substitution principle.
