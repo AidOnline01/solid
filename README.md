@@ -3,7 +3,7 @@
 1. [Single responsibility principles (SRP)](#single-responsibility-principle)
 2. [Open-closed priciple (OCP)](#open-closed-principle)
 3. [Liskov substitution principle (LSP)](#liskov-substitution-principle)
-4. Interface segregation principle (ISP)
+4. [Interface segregation principle (ISP)](#interface-segregation-principle)
 5. Dependency injection principle (DIP)
 
 ## Single responsibility principle
@@ -313,3 +313,117 @@ $controller->getCost(new Cartoon(), 10, 10); // handles errors, and returns zero
 ```
 
 The code working successfully when we replace `Product` with `Sand` and `Cartoon`. That means that our code now obide to liskov substitution principle.
+
+## Interface segregation principle
+
+Class should not be forced to implement methods it doesn't use.
+
+### Wrong example
+```
+interface MediaInterface {
+  public function download();
+  public function upload();
+  public function setAsAvatar();
+  public function changeVolume();
+  public function changeResolution();
+  public function downloadAsPdf();
+  public function downloadAsTxt();
+}
+
+class Book implements MediaInterface {
+  public function download() {}
+  public function upload() {}
+  public function setAsAvatar() { /* Does nothing */ }
+  public function changeVolume() { /* Does nothing */ }
+  public function changeResolution() { /* Does nothing */ }
+  public function downloadAsPdf() {}
+  public function downloadAsTxt() {}
+}
+
+class Image implements MediaInterface {
+    public function download() {}
+    public function upload() {}
+    public function setAsAvatar() {}
+    public function changeVolume() { /* Does nothing */ }
+    public function changeResolution() { /* Does nothing */ }
+    public function downloadAsPdf() { /* Does nothing */ }
+    public function downloadAsTxt() { /* Does nothing */ }
+}
+
+class Movie implements MediaInterface {
+    public function download() {}
+    public function upload() {}
+    public function setAsAvatar() { /* Does nothing */ }
+    public function changeVolume() {}
+    public function changeResolution() {}
+    public function downloadAsPdf() { /* Does nothing */ }
+    public function downloadAsTxt() { /* Does nothing */ }
+}
+
+class Music implements MediaInterface {
+    public function download() {}
+    public function upload() {}
+    public function setAsAvatar() { /* Does nothing */ }
+    public function changeVolume() {}
+    public function changeResolution() { /* Does nothing */ }
+    public function downloadAsPdf() { /* Does nothing */ }
+    public function downloadAsTxt() { /* Does nothing */ }
+}
+```
+All the classes in example above have some methods they don't use, that is clear violation of interface segragation principle.
+
+### Better example
+
+To fix this, we can split `MediaInterface` to `MediaInterface`, `ImageInterface`, `VideoInterface`, `AudioInterface`, `DocumentInterface`
+
+```
+interface MediaInterface {
+  public function download();
+  public function upload();
+}
+
+interface ImageInterface {
+  public function setAsAvatar();
+}
+
+interface VideoInterface {
+  public function changeResolution();
+  public function changeVolume();
+}
+
+interface AudioInterface {
+  public function changeVolume();
+}
+
+interface DocumentInterface {
+  public function downloadAsPdf();
+  public function downloadAsTxt();
+}
+
+class Book implements MediaInterface, DocumentInterface {
+  public function download() {};
+  public function upload() {};
+  public function downloadAsPdf() {};
+  public function downloadAsTxt() {};
+}
+
+class Image implements MediaInterface, ImageInterface {
+    public function download() {};
+    public function upload() {};
+    public function setAsAvatar() {};
+}
+
+class Movie implements MediaInterface, VideoInterface {
+    public function download() {};
+    public function upload() {};
+    public function changeVolume() {};
+    public function changeResolution() {};
+}
+
+class Music implements MediaInterface, AudioInterface {
+    public function download() {};
+    public function upload() {};
+    public function changeVolume() {};
+}
+```
+Now we have one big interface into several small and specific, and now our classes don't have unused methods, thus satisfying interface segragation principle.
