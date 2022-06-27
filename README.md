@@ -4,7 +4,7 @@
 2. [Open-closed priciple (OCP)](#open-closed-principle)
 3. [Liskov substitution principle (LSP)](#liskov-substitution-principle)
 4. [Interface segregation principle (ISP)](#interface-segregation-principle)
-5. Dependency injection principle (DIP)
+5. [Dependency injection principle (DIP)](#dependency-inversion-principle)
 
 ## Single responsibility principle
 We keep separate classes by their responsibility.
@@ -427,3 +427,70 @@ class Music implements MediaInterface, AudioInterface {
 }
 ```
 Now we have one big interface into several small and specific, and now our classes don't have unused methods, thus satisfying interface segragation principle.
+
+## Dependency inversion principle
+
+Class should not depend on another class, it should depend on abstraction. That way we could easily pass another implementation of abstraction without breaking the code.
+
+### Bad Example
+```
+class DiscountService {
+  public function apply(int $price) {
+    $discount = new TwentyPercentDiscount();
+    
+    return $discount->apply($price);
+  }
+}
+
+class TwentyPercentDiscount() {
+  public function apply(int $price) { return $price * 0.8 }
+}
+
+$service = new DiscountService();
+
+echo $this->apply(100); // we get 80
+```
+
+If we want to replace the discount with `ThirtyPercentDiscount` or `SummerDiscount`, we would need to change the `DiscountService`. That's a violation of both Open-Closed principle and Dependency Inversion principle.
+
+### Better example
+
+What we can do, is to ask in parameters of `DiscountService@apply` for instance that implements `DiscountInterface`.
+
+```
+interface DiscountInterface {
+  public function apply(int $price) : int;
+}
+
+class DiscountService() {
+  public function apply(int $price, DiscountInterface $discount) {
+    return $discount->apply($price);
+  }
+}
+
+class TwentyPercentDiscount implements DiscountInterface {
+  public function apply(int $price) { return $price * 0.8; }
+}
+
+class SummerDiscount implements DiscountInterface {
+  public function apply(int $price) {
+    if($price > 10) return $price * 0.8;
+    else if($price > 100) return $price * 0.5;
+    else return $price;
+  }
+}
+
+$discountService = new DiscountService();
+$twentyPercentDiscount = new TwentyPercentDiscount();
+$summerDiscount = new SummerDiscount();
+
+$discountService->apply(200, $twentyPercentDiscount); // returns 160
+$discountService->apply(200, $summerDiscount); // returns 100 
+
+```
+
+That way we can easily swap functionality that our class depends on.
+
+### Dependency injection
+> **Dependency injection** is not the same as **Dependency inversion**. 
+> In simple words dependency injection is technique that delegates creating instances of classes from the class itself to where it would be called (Usually framework does it for us).
